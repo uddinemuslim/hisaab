@@ -7,7 +7,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "tsx tests/currency_and_ledger.test.ts",
+    "test": "tsx tests/currency_and_ledger.test.ts && tsx tests/edge_cases.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
