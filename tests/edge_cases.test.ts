@@ -19,7 +19,7 @@ import {
 import {
   buildWhatsAppMessage,
   formatPhoneNumberForWhatsApp,
-} from '../src/utils/whatsappUtils';
+} from '../src/utils/whatsapp';
 import { BackupPayload, Party, Transaction } from '../src/types';
 
 console.log('--- RUNNING EXTENSIVE EDGE CASE SUITE ---');

@@ -1,16 +1,18 @@
+import { TurboModuleRegistry, NativeModules } from 'react-native';
+
 /**
  * Safe native bridge for @react-native-google-signin/google-signin.
  *
  * In standard Expo Go, custom native TurboModules like 'RNGoogleSignin' are not
- * compiled into the binary, causing an immediate:
- * "Invariant Violation: TurboModuleRegistry.getEnforcing(...): 'RNGoogleSignin' could not be found"
- * when imported statically.
+ * compiled into the binary. Calling require('@react-native-google-signin/google-signin')
+ * causes TurboModuleRegistry.getEnforcing('RNGoogleSignin') to throw an Invariant Violation.
  *
- * This wrapper loads the native module on demand inside a try-catch block so that
- * the entire app (SQLite database, ledger calculations, Guest mode, all UI screens)
- * runs 100% smoothly in Expo Go, while seamlessly enabling native Google Sign-In &
- * Drive backup when running in an Expo Development Build (npx expo run:android) or
- * standalone APK.
+ * By proactively inspecting TurboModuleRegistry.get('RNGoogleSignin') and
+ * NativeModules.RNGoogleSignin BEFORE requiring the module, we prevent getEnforcing
+ * from ever being called in Expo Go.
+ *
+ * When built into a native APK (npx expo run:android / eas build), RNGoogleSignin
+ * is registered in the binary, and this bridge initializes full native Google Sign-In & Drive sync.
  */
 
 let GoogleSigninModule: any = null;
@@ -34,8 +36,23 @@ export function getNativeGoogleSignin(): {
     };
   }
 
+  // Pre-check if RNGoogleSignin is registered in the native binary
+  const hasNativeModule = Boolean(
+    (typeof TurboModuleRegistry?.get === 'function' && TurboModuleRegistry.get('RNGoogleSignin') != null) ||
+    NativeModules?.RNGoogleSignin != null
+  );
+
+  if (!hasNativeModule) {
+    isNativeModuleAvailable = false;
+    return {
+      isAvailable: false,
+      GoogleSignin: null,
+      statusCodes: statusCodesModule,
+    };
+  }
+
   try {
-    // Dynamic require wrapped in try-catch to safely handle Expo Go environment
+    // Only require when the native module is actually present in the binary
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const gsignin = require('@react-native-google-signin/google-signin');
     GoogleSigninModule = gsignin.GoogleSignin;
@@ -44,7 +61,6 @@ export function getNativeGoogleSignin(): {
     }
     isNativeModuleAvailable = !!GoogleSigninModule;
   } catch (err) {
-    // Caught in Expo Go where RNGoogleSignin TurboModule is absent from the host APK
     isNativeModuleAvailable = false;
   }
 

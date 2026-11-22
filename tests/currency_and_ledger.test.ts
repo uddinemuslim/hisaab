@@ -9,7 +9,7 @@ import {
   COLOR_GIVE,
   COLOR_SETTLED,
 } from '../src/utils/currency';
-import { buildWhatsAppMessage, formatPhoneNumberForWhatsApp } from '../src/utils/whatsappUtils';
+import { buildWhatsAppMessage, formatPhoneNumberForWhatsApp } from '../src/utils/whatsapp';
 
 console.log('--- RUNNING HISAAB LOGIC & CURRENCY TESTS ---');
 
