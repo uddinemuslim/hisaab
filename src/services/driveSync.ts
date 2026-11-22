@@ -1,4 +1,4 @@
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { getNativeGoogleSignin } from './googleAuthNative';
 import { exportAllData, restoreAllData } from '../db';
 import { BackupPayload, AuthMode } from '../types';
 import { getStoredAuthState, updateLastSyncedTimestamp } from './auth';
@@ -40,6 +40,8 @@ function updateStatus(updates: Partial<SyncStatus>) {
  */
 async function getAccessToken(): Promise<string | null> {
   try {
+    const { isAvailable, GoogleSignin } = getNativeGoogleSignin();
+    if (!isAvailable || !GoogleSignin) return null;
     const tokens = await GoogleSignin.getTokens();
     return tokens.accessToken || null;
   } catch (error) {

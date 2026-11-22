@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { getNativeGoogleSignin } from './googleAuthNative';
 import { AuthMode, AuthState, UserProfile } from '../types';
 
 const KEY_AUTH_MODE = '@hisaab_auth_mode';
@@ -10,6 +10,9 @@ let isConfigured = false;
 
 export function configureGoogleSignIn(): void {
   if (isConfigured) return;
+  const { isAvailable, GoogleSignin } = getNativeGoogleSignin();
+  if (!isAvailable || !GoogleSignin) return;
+
   try {
     GoogleSignin.configure({
       scopes: [
@@ -82,6 +85,16 @@ export async function signInAsGuest(): Promise<AuthState> {
  * Sign in with Google account.
  */
 export async function signInWithGoogle(): Promise<{ success: boolean; authState?: AuthState; error?: string }> {
+  const { isAvailable, GoogleSignin, statusCodes } = getNativeGoogleSignin();
+
+  if (!isAvailable || !GoogleSignin) {
+    return {
+      success: false,
+      error:
+        'Google Sign-In requires an Expo Development Build (npx expo run:android) or standalone APK because it uses custom native Google Play Services binaries not bundled in Expo Go.\n\nYou can test all ledger features right now using "Continue as Guest".',
+    };
+  }
+
   try {
     configureGoogleSignIn();
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -148,7 +161,10 @@ export async function signOut(): Promise<void> {
     const mode = await AsyncStorage.getItem(KEY_AUTH_MODE);
     if (mode === 'google') {
       try {
-        await GoogleSignin.signOut();
+        const { isAvailable, GoogleSignin } = getNativeGoogleSignin();
+        if (isAvailable && GoogleSignin) {
+          await GoogleSignin.signOut();
+        }
       } catch (e) {
         // Ignore if already signed out
       }
