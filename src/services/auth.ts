@@ -9,7 +9,6 @@ const KEY_LAST_SYNCED = '@hisaab_last_synced';
 let isConfigured = false;
 
 export function configureGoogleSignIn(): void {
-  if (isConfigured) return;
   const { isAvailable, GoogleSignin } = getNativeGoogleSignin();
   if (!isAvailable || !GoogleSignin) return;
 
@@ -20,9 +19,6 @@ export function configureGoogleSignIn(): void {
         'https://www.googleapis.com/auth/userinfo.profile',
         'https://www.googleapis.com/auth/userinfo.email',
       ],
-      // offlineAccess: true allows obtaining server auth code/refresh tokens
-      offlineAccess: true,
-      forceCodeForRefreshToken: true,
     });
     isConfigured = true;
   } catch (err) {
@@ -102,8 +98,15 @@ export async function signInWithGoogle(): Promise<{ success: boolean; authState?
     const signInResult = await GoogleSignin.signIn();
     
     // In newer versions of @react-native-google-signin/google-signin,
-    // response can be in data or direct object
-    const userObj = (signInResult as any).data?.user || (signInResult as any).user;
+    // response can be in data or direct object, or type === 'cancelled'
+    if ((signInResult as any)?.type === 'cancelled') {
+      return { success: false, error: 'Sign-in was cancelled' };
+    }
+
+    const userObj =
+      (signInResult as any).data?.user ||
+      (signInResult as any).data ||
+      (signInResult as any).user;
     
     if (!userObj) {
       throw new Error('Could not retrieve user info from Google');

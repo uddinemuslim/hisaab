@@ -61,9 +61,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onAuthSuccess }) => {
         </View>
         <Text style={styles.brandTitle}>HISAAB</Text>
         <Text style={styles.tagline}>Simple, Private Personal Ledger</Text>
-        <View style={styles.featureBadge}>
-          <Text style={styles.featureBadgeText}>100% Local • Zero Backend</Text>
-        </View>
       </View>
 
       {/* Action Buttons (Strictly ONLY two buttons) */}
@@ -151,17 +148,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#6B7280',
     marginBottom: 16,
-  },
-  featureBadge: {
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-  },
-  featureBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4B5563',
   },
   actions: {
     width: '100%',
