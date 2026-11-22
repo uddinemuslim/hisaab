@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Transaction, TransactionType } from '../types';
+import { DatePickerModal } from '../components';
 import {
   parseRupeesToPaise,
   formatPaiseToRupees,
@@ -51,6 +52,7 @@ export const EntryModal: React.FC<EntryModalProps> = ({
   const [amountInput, setAmountInput] = useState('');
   const [note, setNote] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -222,26 +224,51 @@ export const EntryModal: React.FC<EntryModalProps> = ({
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Date</Text>
               <View style={styles.dateRow}>
-                <View style={styles.currentDateBadge}>
-                  <MaterialCommunityIcons name="calendar-month-outline" size={18} color="#4B5563" />
+                <TouchableOpacity
+                  style={styles.currentDateBadge}
+                  onPress={() => setIsDatePickerOpen(true)}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="calendar-month-outline" size={18} color="#2563EB" />
                   <Text style={styles.currentDateText}>
                     {formatDate(selectedDate.getTime())}
                   </Text>
-                </View>
+                  <MaterialCommunityIcons name="chevron-down" size={16} color="#6B7280" />
+                </TouchableOpacity>
 
                 <View style={styles.quickDateButtons}>
                   <TouchableOpacity
-                    style={styles.quickDateBtn}
+                    style={[
+                      styles.quickDateBtn,
+                      formatDate(selectedDate.getTime()) === 'Today' && styles.quickDateBtnActive,
+                    ]}
                     onPress={setDateToday}
                   >
-                    <Text style={styles.quickDateText}>Today</Text>
+                    <Text
+                      style={[
+                        styles.quickDateText,
+                        formatDate(selectedDate.getTime()) === 'Today' && styles.quickDateTextActive,
+                      ]}
+                    >
+                      Today
+                    </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={styles.quickDateBtn}
+                    style={[
+                      styles.quickDateBtn,
+                      formatDate(selectedDate.getTime()) === 'Yesterday' && styles.quickDateBtnActive,
+                    ]}
                     onPress={setDateYesterday}
                   >
-                    <Text style={styles.quickDateText}>Yesterday</Text>
+                    <Text
+                      style={[
+                        styles.quickDateText,
+                        formatDate(selectedDate.getTime()) === 'Yesterday' && styles.quickDateTextActive,
+                      ]}
+                    >
+                      Yesterday
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -292,6 +319,15 @@ export const EntryModal: React.FC<EntryModalProps> = ({
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Date Picker Modal */}
+      <DatePickerModal
+        visible={isDatePickerOpen}
+        selectedDate={selectedDate}
+        onSelectDate={(newDate) => setSelectedDate(newDate)}
+        onClose={() => setIsDatePickerOpen(false)}
+        accentColor={activeColor}
+      />
     </Modal>
   );
 };
@@ -397,6 +433,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     gap: 6,
   },
   currentDateText: {
@@ -409,15 +447,25 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   quickDateBtn: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
   },
+  quickDateBtnActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#93C5FD',
+  },
   quickDateText: {
     fontSize: 12,
     fontWeight: '600',
+    color: '#6B7280',
+  },
+  quickDateTextActive: {
     color: '#2563EB',
+    fontWeight: '700',
   },
   noteInput: {
     backgroundColor: '#F9FAFB',

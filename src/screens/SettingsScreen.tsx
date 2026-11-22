@@ -6,6 +6,7 @@ import {
   View,
   SafeAreaView,
   StatusBar,
+  Platform,
   Alert,
   ActivityIndicator,
   ScrollView,
@@ -298,6 +299,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0,
   },
   container: {
     flex: 1,

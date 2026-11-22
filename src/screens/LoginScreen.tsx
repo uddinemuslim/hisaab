@@ -6,6 +6,9 @@ import {
   View,
   ActivityIndicator,
   Alert,
+  SafeAreaView,
+  StatusBar,
+  Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { signInWithGoogle, signInAsGuest } from '../services';
@@ -48,7 +51,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onAuthSuccess }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" />
+      <View style={styles.container}>
       {/* Brand Header */}
       <View style={styles.header}>
         <View style={styles.iconCircle}>
@@ -102,16 +107,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onAuthSuccess }) => {
         </Text>
       </View>
     </View>
+  </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0,
+  },
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingVertical: 48,
+    paddingBottom: 32,
+    paddingTop: 16,
   },
   header: {
     alignItems: 'center',

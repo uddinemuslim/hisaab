@@ -33,6 +33,11 @@
     "plugins": [
       "@react-native-google-signin/google-signin",
       "expo-sqlite"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d1a15742-61a0-47dd-8ff8-4bda6f77f183"
+      }
+    }
   }
 }
