@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNativeGoogleSignin } from './googleAuthNative';
 import { AuthMode, AuthState, UserProfile } from '../types';
+import { CONFIG } from '../config';
 
 const KEY_AUTH_MODE = '@hisaab_auth_mode';
 const KEY_USER_PROFILE = '@hisaab_user_profile';
@@ -13,13 +14,15 @@ export function configureGoogleSignIn(): void {
   if (!isAvailable || !GoogleSignin) return;
 
   try {
-    GoogleSignin.configure({
+    const config: any = {
       scopes: [
         'https://www.googleapis.com/auth/drive.appdata',
-        'https://www.googleapis.com/auth/userinfo.profile',
-        'https://www.googleapis.com/auth/userinfo.email',
       ],
-    });
+    };
+    if (CONFIG.googleWebClientId && CONFIG.googleWebClientId.trim().length > 0) {
+      config.webClientId = CONFIG.googleWebClientId.trim();
+    }
+    GoogleSignin.configure(config);
     isConfigured = true;
   } catch (err) {
     console.warn('GoogleSignin configuration error:', err);
@@ -143,6 +146,16 @@ export async function signInWithGoogle(): Promise<{ success: boolean; authState?
       return { success: false, error: 'Sign-in already in progress' };
     } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
       return { success: false, error: 'Google Play Services not available or outdated' };
+    }
+
+    const errMsg = String(error?.message || '');
+    const errCode = String(error?.code || '');
+    if (errCode === '10' || errCode === 'DEVELOPER_ERROR' || errMsg.includes('DEVELOPER_ERROR')) {
+      return {
+        success: false,
+        error:
+          'DEVELOPER_ERROR (Google Cloud Registration Required):\n\nYour APK\'s SHA-1 certificate is not yet registered in Google Cloud Console.\n\nPackage Name: com.hisaab.app\nSHA-1: DD:A7:61:69:EC:44:A0:3E:1C:AE:25:DA:14:FF:35:EF:EB:5D:6A:28\n\nPlease add this Android OAuth Client in Google Cloud Console. In the meantime, you can continue with 100% of all ledger features offline using "Continue as Guest".',
+      };
     }
     return { success: false, error: error.message || 'Google sign-in failed' };
   }
