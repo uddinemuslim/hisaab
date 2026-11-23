@@ -10,10 +10,12 @@ import {
   PartyDetailScreen,
   SettingsScreen,
 } from './src/screens';
+import { ThemeProvider, useTheme } from './src/theme';
 
 type ScreenType = 'login' | 'home' | 'party_detail' | 'settings';
 
-export default function App() {
+function MainApp() {
+  const { colors, isDark } = useTheme();
   const [isInitializing, setIsInitializing] = useState(true);
   const [authState, setAuthState] = useState<AuthState | null>(null);
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
@@ -88,17 +90,17 @@ export default function App() {
 
   if (isInitializing) {
     return (
-      <View style={styles.splashContainer}>
-        <Text style={styles.splashTitle}>HISAAB</Text>
-        <Text style={styles.splashSubtitle}>Loading your ledger...</Text>
-        <ActivityIndicator size="large" color="#2563EB" style={styles.splashSpinner} />
+      <View style={[styles.splashContainer, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.splashTitle, { color: colors.textPrimary }]}>HISAAB</Text>
+        <Text style={[styles.splashSubtitle, { color: colors.textSecondary }]}>Loading your ledger...</Text>
+        <ActivityIndicator size="large" color={colors.primary} style={styles.splashSpinner} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {currentScreen === 'login' && (
         <LoginScreen onAuthSuccess={handleAuthSuccess} />
@@ -132,27 +134,31 @@ export default function App() {
   );
 }
 
+export default function App() {
+  return (
+    <ThemeProvider>
+      <MainApp />
+    </ThemeProvider>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   splashContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
   },
   splashTitle: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#111827',
     letterSpacing: 2,
     marginBottom: 8,
   },
   splashSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
   },
   splashSpinner: {
     marginTop: 24,

@@ -1,31 +1,34 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { DashboardSummary } from '../types';
-import { formatPaiseToRupees, COLOR_GET, COLOR_GIVE } from '../utils';
+import { formatPaiseToRupees } from '../utils';
+import { useTheme } from '../theme';
 
 interface SummaryCardProps {
   summary: DashboardSummary;
 }
 
 export const SummaryCard: React.FC<SummaryCardProps> = ({ summary }) => {
+  const { colors } = useTheme();
+
   return (
-    <View style={styles.cardContainer}>
+    <View style={[styles.cardContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
       {/* Total You Will Get (Left) */}
-      <View style={[styles.column, styles.borderRight]}>
-        <Text style={styles.label}>YOU WILL GET</Text>
-        <Text style={[styles.amount, { color: COLOR_GET }]} numberOfLines={1} adjustsFontSizeToFit>
+      <View style={[styles.column, styles.borderRight, { borderRightColor: colors.border }]}>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>YOU WILL GET</Text>
+        <Text style={[styles.amount, { color: colors.got }]} numberOfLines={1} adjustsFontSizeToFit>
           {formatPaiseToRupees(summary.totalWillGetPaise, { absolute: true })}
         </Text>
-        <Text style={styles.subtext}>Receivable</Text>
+        <Text style={[styles.subtext, { color: colors.textMuted }]}>Receivable</Text>
       </View>
 
       {/* Total You Will Give (Right) */}
       <View style={styles.column}>
-        <Text style={styles.label}>YOU WILL GIVE</Text>
-        <Text style={[styles.amount, { color: COLOR_GIVE }]} numberOfLines={1} adjustsFontSizeToFit>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>YOU WILL GIVE</Text>
+        <Text style={[styles.amount, { color: colors.gave }]} numberOfLines={1} adjustsFontSizeToFit>
           {formatPaiseToRupees(summary.totalWillGivePaise, { absolute: true })}
         </Text>
-        <Text style={styles.subtext}>Payable</Text>
+        <Text style={[styles.subtext, { color: colors.textMuted }]}>Payable</Text>
       </View>
     </View>
   );
@@ -34,14 +37,12 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({ summary }) => {
 const styles = StyleSheet.create({
   cardContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingVertical: 18,
     paddingHorizontal: 12,
     marginHorizontal: 16,
     marginVertical: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   column: {
     flex: 1,
@@ -51,12 +52,10 @@ const styles = StyleSheet.create({
   },
   borderRight: {
     borderRightWidth: 1,
-    borderRightColor: '#E5E7EB',
   },
   label: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#6B7280',
     letterSpacing: 0.8,
     marginBottom: 4,
   },
@@ -67,6 +66,5 @@ const styles = StyleSheet.create({
   },
   subtext: {
     fontSize: 11,
-    color: '#9CA3AF',
   },
 });

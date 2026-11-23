@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../theme';
 
 interface DatePickerModalProps {
   visible: boolean;
@@ -28,8 +29,11 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   selectedDate,
   onSelectDate,
   onClose,
-  accentColor = '#2563EB',
+  accentColor,
 }) => {
+  const { colors, isDark } = useTheme();
+  const effectiveAccent = accentColor || colors.primary;
+
   const [viewYear, setViewYear] = useState<number>(selectedDate.getFullYear());
   const [viewMonth, setViewMonth] = useState<number>(selectedDate.getMonth());
   const [tempDate, setTempDate] = useState<Date>(selectedDate);
@@ -110,12 +114,12 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.backdrop}>
-        <View style={styles.dialogContainer}>
+        <View style={[styles.dialogContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {/* Dialog Title */}
-          <View style={styles.dialogHeader}>
+          <View style={[styles.dialogHeader, { borderBottomColor: colors.borderLight }]}>
             <View>
-              <Text style={styles.dialogTitle}>Select Date</Text>
-              <Text style={styles.dialogSubtitle}>
+              <Text style={[styles.dialogTitle, { color: colors.textPrimary }]}>Select Date</Text>
+              <Text style={[styles.dialogSubtitle, { color: colors.textSecondary }]}>
                 {tempDate.toLocaleDateString('en-IN', {
                   weekday: 'short',
                   day: 'numeric',
@@ -125,46 +129,58 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <MaterialCommunityIcons name="close" size={22} color="#6B7280" />
+              <MaterialCommunityIcons name="close" size={22} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           {/* Quick Presets Bar */}
           <View style={styles.presetsRow}>
-            <TouchableOpacity style={styles.presetChip} onPress={() => applyPreset(0)}>
-              <Text style={styles.presetText}>Today</Text>
+            <TouchableOpacity
+              style={[styles.presetChip, { backgroundColor: isDark ? colors.background : '#F3F4F6', borderColor: colors.border }]}
+              onPress={() => applyPreset(0)}
+            >
+              <Text style={[styles.presetText, { color: colors.textPrimary }]}>Today</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.presetChip} onPress={() => applyPreset(1)}>
-              <Text style={styles.presetText}>Yesterday</Text>
+            <TouchableOpacity
+              style={[styles.presetChip, { backgroundColor: isDark ? colors.background : '#F3F4F6', borderColor: colors.border }]}
+              onPress={() => applyPreset(1)}
+            >
+              <Text style={[styles.presetText, { color: colors.textPrimary }]}>Yesterday</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.presetChip} onPress={() => applyPreset(2)}>
-              <Text style={styles.presetText}>2 Days Ago</Text>
+            <TouchableOpacity
+              style={[styles.presetChip, { backgroundColor: isDark ? colors.background : '#F3F4F6', borderColor: colors.border }]}
+              onPress={() => applyPreset(2)}
+            >
+              <Text style={[styles.presetText, { color: colors.textPrimary }]}>2 Days Ago</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.presetChip} onPress={() => applyPreset(7)}>
-              <Text style={styles.presetText}>1 Week Ago</Text>
+            <TouchableOpacity
+              style={[styles.presetChip, { backgroundColor: isDark ? colors.background : '#F3F4F6', borderColor: colors.border }]}
+              onPress={() => applyPreset(7)}
+            >
+              <Text style={[styles.presetText, { color: colors.textPrimary }]}>1 Week Ago</Text>
             </TouchableOpacity>
           </View>
 
           {/* Month / Year Navigator */}
           <View style={styles.monthNavRow}>
             <TouchableOpacity
-              style={styles.navArrowBtn}
+              style={[styles.navArrowBtn, { backgroundColor: isDark ? colors.background : '#F9FAFB' }]}
               onPress={handlePrevMonth}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <MaterialCommunityIcons name="chevron-left" size={24} color="#374151" />
+              <MaterialCommunityIcons name="chevron-left" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
 
-            <Text style={styles.monthNavTitle}>
+            <Text style={[styles.monthNavTitle, { color: colors.textPrimary }]}>
               {MONTH_NAMES[viewMonth]} {viewYear}
             </Text>
 
             <TouchableOpacity
-              style={styles.navArrowBtn}
+              style={[styles.navArrowBtn, { backgroundColor: isDark ? colors.background : '#F9FAFB' }]}
               onPress={handleNextMonth}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <MaterialCommunityIcons name="chevron-right" size={24} color="#374151" />
+              <MaterialCommunityIcons name="chevron-right" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
 
@@ -175,7 +191,8 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
                 key={label}
                 style={[
                   styles.dayLabelText,
-                  (index === 0 || index === 6) && styles.weekendLabel,
+                  { color: colors.textSecondary },
+                  (index === 0 || index === 6) && { color: colors.textMuted },
                 ]}
               >
                 {label}
@@ -198,8 +215,8 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
                   key={`day-${day}`}
                   style={[
                     styles.dayCell,
-                    selected && { backgroundColor: accentColor },
-                    currentToday && !selected && styles.todayCell,
+                    selected && { backgroundColor: effectiveAccent },
+                    currentToday && !selected && [styles.todayCell, { borderColor: effectiveAccent }],
                   ]}
                   onPress={() => handleDayPress(day)}
                   activeOpacity={0.7}
@@ -207,8 +224,9 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
                   <Text
                     style={[
                       styles.dayCellText,
+                      { color: colors.textPrimary },
                       selected && styles.dayCellTextSelected,
-                      currentToday && !selected && { color: accentColor, fontWeight: '700' },
+                      currentToday && !selected && { color: effectiveAccent, fontWeight: '700' },
                     ]}
                   >
                     {day}
@@ -221,11 +239,11 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
           {/* Dialog Action Buttons */}
           <View style={styles.dialogActions}>
             <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.7}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+              <Text style={[styles.cancelBtnText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.confirmBtn, { backgroundColor: accentColor }]}
+              style={[styles.confirmBtn, { backgroundColor: effectiveAccent }]}
               onPress={handleConfirm}
               activeOpacity={0.8}
             >
@@ -241,7 +259,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
@@ -249,12 +267,10 @@ const styles = StyleSheet.create({
   dialogContainer: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
     elevation: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   dialogHeader: {
     flexDirection: 'row',
@@ -262,17 +278,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
     paddingBottom: 10,
   },
   dialogTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#111827',
   },
   dialogSubtitle: {
     fontSize: 13,
-    color: '#6B7280',
     marginTop: 2,
   },
   presetsRow: {
@@ -285,15 +298,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: 6,
-    backgroundColor: '#F3F4F6',
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   presetText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#374151',
   },
   monthNavRow: {
     flexDirection: 'row',
@@ -304,12 +314,10 @@ const styles = StyleSheet.create({
   navArrowBtn: {
     padding: 6,
     borderRadius: 6,
-    backgroundColor: '#F9FAFB',
   },
   monthNavTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
   },
   dayLabelsRow: {
     flexDirection: 'row',
@@ -321,10 +329,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
-  },
-  weekendLabel: {
-    color: '#9CA3AF',
   },
   daysGrid: {
     flexDirection: 'row',
@@ -346,11 +350,9 @@ const styles = StyleSheet.create({
   },
   todayCell: {
     borderWidth: 1.5,
-    borderColor: '#93C5FD',
   },
   dayCellText: {
     fontSize: 14,
-    color: '#1F2937',
     fontWeight: '500',
   },
   dayCellTextSelected: {
@@ -372,7 +374,6 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
   },
   confirmBtn: {
     paddingVertical: 8,

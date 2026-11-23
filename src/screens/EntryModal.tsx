@@ -10,17 +10,17 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  SafeAreaView,
+  StatusBar,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Transaction, TransactionType } from '../types';
 import { DatePickerModal } from '../components';
 import {
   parseRupeesToPaise,
-  formatPaiseToRupees,
-  COLOR_GET,
-  COLOR_GIVE,
-  formatDate,
+  formatDatePill,
 } from '../utils';
+import { useTheme } from '../theme';
 
 interface EntryModalProps {
   visible: boolean;
@@ -47,6 +47,7 @@ export const EntryModal: React.FC<EntryModalProps> = ({
   onSave,
   onDelete,
 }) => {
+  const { colors, isDark } = useTheme();
   const isEditing = !!existingTransaction;
   const [type, setType] = useState<TransactionType>(initialType);
   const [amountInput, setAmountInput] = useState('');
@@ -61,7 +62,6 @@ export const EntryModal: React.FC<EntryModalProps> = ({
     if (visible) {
       if (existingTransaction) {
         setType(existingTransaction.type);
-        // Format paise to rupees string for editing (e.g. 50000 -> 500, 50050 -> 500.50)
         const paise = existingTransaction.amount_paise;
         const whole = Math.floor(paise / 100);
         const frac = paise % 100;
@@ -82,7 +82,7 @@ export const EntryModal: React.FC<EntryModalProps> = ({
   const handleSave = async () => {
     const amountPaise = parseRupeesToPaise(amountInput);
     if (amountPaise <= 0) {
-      setErrorMessage('Please enter a valid amount greater than ₹0');
+      setErrorMessage('Please enter an amount greater than ₹0');
       return;
     }
 
@@ -131,387 +131,390 @@ export const EntryModal: React.FC<EntryModalProps> = ({
     );
   };
 
-  const setDateToday = () => setSelectedDate(new Date());
-  const setDateYesterday = () => {
-    const y = new Date();
-    y.setDate(y.getDate() - 1);
-    setSelectedDate(y);
-  };
-
-  const activeColor = type === 'GAVE' ? COLOR_GIVE : COLOR_GET;
+  const activeColor = type === 'GAVE' ? colors.gave : colors.got;
+  const headerAmount = amountInput ? `₹ ${amountInput}` : '₹ 0';
+  const headerTitle =
+    type === 'GOT'
+      ? `You got ${headerAmount} from ${partyName}`
+      : `You gave ${headerAmount} to ${partyName}`;
 
   return (
     <Modal
       visible={visible}
-      transparent
       animationType="slide"
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.overlay}
-      >
-        <View style={styles.sheetContainer}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.surface }]}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
           {/* Header */}
-          <View style={styles.header}>
-            <View>
-              <Text style={styles.headerTitle}>
-                {isEditing ? 'Edit Entry' : `Add Entry with ${partyName}`}
-              </Text>
-              <Text style={styles.headerSubtitle}>
-                {type === 'GAVE' ? 'You gave money (Debit)' : 'You received money (Credit)'}
+          <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={onClose}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+
+            <View style={styles.headerTitleContainer}>
+              <Text style={[styles.headerTitle, { color: activeColor }]} numberOfLines={1}>
+                {headerTitle}
               </Text>
             </View>
 
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <MaterialCommunityIcons name="close" size={24} color="#6B7280" />
-            </TouchableOpacity>
+            {isEditing && onDelete ? (
+              <TouchableOpacity
+                style={styles.headerRightBtn}
+                onPress={handleDelete}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                disabled={isSubmitting}
+              >
+                <MaterialCommunityIcons name="trash-can-outline" size={22} color={colors.gave} />
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.headerRightPlaceholder} />
+            )}
           </View>
 
-          <ScrollView keyboardShouldPersistTaps="handled">
-            {/* Type Selector (GAVE / GOT) */}
-            <View style={styles.typeSelectorRow}>
-              <TouchableOpacity
-                style={[
-                  styles.typeBtn,
-                  type === 'GAVE' && { backgroundColor: COLOR_GIVE, borderColor: COLOR_GIVE },
-                ]}
-                onPress={() => setType('GAVE')}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.typeBtnText, type === 'GAVE' && styles.typeBtnTextActive]}>
-                  YOU GAVE (OUT)
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.typeBtn,
-                  type === 'GOT' && { backgroundColor: COLOR_GET, borderColor: COLOR_GET },
-                ]}
-                onPress={() => setType('GOT')}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.typeBtnText, type === 'GOT' && styles.typeBtnTextActive]}>
-                  YOU GOT (IN)
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {errorMessage ? (
-              <Text style={styles.errorText}>{errorMessage}</Text>
-            ) : null}
-
-            {/* Amount Input with Numeric keypad focus */}
-            <View style={styles.amountContainer}>
-              <Text style={[styles.currencyPrefix, { color: activeColor }]}>₹</Text>
-              <TextInput
-                style={[styles.amountInput, { color: activeColor }]}
-                placeholder="0"
-                placeholderTextColor="#D1D5DB"
-                keyboardType="decimal-pad"
-                autoFocus
-                value={amountInput}
-                onChangeText={(text) => {
-                  setAmountInput(text);
-                  if (errorMessage) setErrorMessage('');
-                }}
-                maxLength={10}
-              />
-            </View>
-
-            {/* Date Selection */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Date</Text>
-              <View style={styles.dateRow}>
+          {/* Khatabook Form Body with Keyboard Avoidance */}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.keyboardContainer}
+          >
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* Type Switcher Pills */}
+              <View style={styles.typeSelectorRow}>
                 <TouchableOpacity
-                  style={styles.currentDateBadge}
-                  onPress={() => setIsDatePickerOpen(true)}
-                  activeOpacity={0.7}
+                  style={[
+                    styles.typeBtn,
+                    {
+                      borderColor: type === 'GAVE' ? colors.gave : colors.border,
+                      backgroundColor: type === 'GAVE' ? colors.gave : colors.card,
+                    },
+                  ]}
+                  onPress={() => setType('GAVE')}
+                  activeOpacity={0.8}
                 >
-                  <MaterialCommunityIcons name="calendar-month-outline" size={18} color="#2563EB" />
-                  <Text style={styles.currentDateText}>
-                    {formatDate(selectedDate.getTime())}
+                  <MaterialCommunityIcons
+                    name="arrow-up-circle-outline"
+                    size={16}
+                    color={type === 'GAVE' ? '#FFFFFF' : colors.textSecondary}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text
+                    style={[
+                      styles.typeBtnText,
+                      { color: type === 'GAVE' ? '#FFFFFF' : colors.textSecondary },
+                    ]}
+                  >
+                    YOU GAVE
                   </Text>
-                  <MaterialCommunityIcons name="chevron-down" size={16} color="#6B7280" />
                 </TouchableOpacity>
 
-                <View style={styles.quickDateButtons}>
-                  <TouchableOpacity
-                    style={[
-                      styles.quickDateBtn,
-                      formatDate(selectedDate.getTime()) === 'Today' && styles.quickDateBtnActive,
-                    ]}
-                    onPress={setDateToday}
-                  >
-                    <Text
-                      style={[
-                        styles.quickDateText,
-                        formatDate(selectedDate.getTime()) === 'Today' && styles.quickDateTextActive,
-                      ]}
-                    >
-                      Today
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.quickDateBtn,
-                      formatDate(selectedDate.getTime()) === 'Yesterday' && styles.quickDateBtnActive,
-                    ]}
-                    onPress={setDateYesterday}
-                  >
-                    <Text
-                      style={[
-                        styles.quickDateText,
-                        formatDate(selectedDate.getTime()) === 'Yesterday' && styles.quickDateTextActive,
-                      ]}
-                    >
-                      Yesterday
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-
-            {/* Optional Note */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Note / Reason (Optional)</Text>
-              <TextInput
-                style={styles.noteInput}
-                placeholder="e.g. Grocery bill, Rent, Cash advance, etc."
-                placeholderTextColor="#9CA3AF"
-                value={note}
-                onChangeText={setNote}
-                multiline
-                numberOfLines={2}
-                maxLength={120}
-              />
-            </View>
-
-            {/* Action Buttons */}
-            <View style={styles.actionsContainer}>
-              {isEditing && onDelete ? (
                 <TouchableOpacity
-                  style={styles.deleteBtn}
-                  onPress={handleDelete}
-                  disabled={isSubmitting}
+                  style={[
+                    styles.typeBtn,
+                    {
+                      borderColor: type === 'GOT' ? colors.got : colors.border,
+                      backgroundColor: type === 'GOT' ? colors.got : colors.card,
+                    },
+                  ]}
+                  onPress={() => setType('GOT')}
+                  activeOpacity={0.8}
                 >
-                  <MaterialCommunityIcons name="trash-can-outline" size={20} color="#DC2626" />
-                  <Text style={styles.deleteBtnText}>Delete</Text>
+                  <MaterialCommunityIcons
+                    name="arrow-down-circle-outline"
+                    size={16}
+                    color={type === 'GOT' ? '#FFFFFF' : colors.textSecondary}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text
+                    style={[
+                      styles.typeBtnText,
+                      { color: type === 'GOT' ? '#FFFFFF' : colors.textSecondary },
+                    ]}
+                  >
+                    YOU GOT
+                  </Text>
                 </TouchableOpacity>
+              </View>
+
+              {errorMessage ? (
+                <View style={[styles.errorBanner, { backgroundColor: colors.gaveBg }]}>
+                  <Text style={[styles.errorText, { color: colors.gaveText }]}>{errorMessage}</Text>
+                </View>
               ) : null}
 
+              {/* Large Amount Input Card */}
+              <View style={[styles.amountCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.amountCardLabel, { color: colors.textSecondary }]}>
+                  ENTER AMOUNT
+                </Text>
+                <View style={styles.amountInputRow}>
+                  <Text style={[styles.currencySymbol, { color: activeColor }]}>₹</Text>
+                  <TextInput
+                    style={[styles.amountInput, { color: activeColor }]}
+                    placeholder="0"
+                    placeholderTextColor={colors.border}
+                    keyboardType="decimal-pad"
+                    autoFocus
+                    value={amountInput}
+                    onChangeText={(text) => {
+                      setAmountInput(text);
+                      if (errorMessage) setErrorMessage('');
+                    }}
+                    maxLength={10}
+                  />
+                </View>
+              </View>
+
+              {/* Date Picker Pill: [📅 23 Nov 26 ▼] */}
+              <View style={styles.datePillContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.datePill,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                  onPress={() => setIsDatePickerOpen(true)}
+                  activeOpacity={0.8}
+                >
+                  <MaterialCommunityIcons
+                    name="calendar-month-outline"
+                    size={18}
+                    color={activeColor}
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text style={[styles.datePillText, { color: colors.textPrimary }]}>
+                    {formatDatePill(selectedDate.getTime())}
+                  </Text>
+                  <MaterialCommunityIcons
+                    name="menu-down"
+                    size={20}
+                    color={colors.textSecondary}
+                    style={{ marginLeft: 4 }}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Details / Note Input */}
+              <View style={[styles.noteCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.noteLabel, { color: colors.textSecondary }]}>DETAILS / NOTE</Text>
+                <TextInput
+                  style={[
+                    styles.noteInput,
+                    {
+                      backgroundColor: colors.inputBg,
+                      borderColor: colors.inputBorder,
+                      color: colors.textPrimary,
+                    },
+                  ]}
+                  placeholder="Enter details (Items, bill no., quantity, etc.)"
+                  placeholderTextColor={colors.textMuted}
+                  value={note}
+                  onChangeText={setNote}
+                  multiline
+                  numberOfLines={3}
+                  maxLength={150}
+                  textAlignVertical="top"
+                />
+              </View>
+            </ScrollView>
+
+            {/* Save Button sits prominently above keyboard */}
+            <View style={[styles.bottomBar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
               <TouchableOpacity
                 style={[
                   styles.saveBtn,
                   { backgroundColor: activeColor },
-                  isSubmitting && styles.btnDisabled,
+                  isSubmitting && styles.saveBtnDisabled,
                 ]}
                 onPress={handleSave}
                 disabled={isSubmitting}
+                activeOpacity={0.85}
               >
                 <Text style={styles.saveBtnText}>
-                  {isSubmitting ? 'Saving...' : 'Save Entry'}
+                  {isSubmitting ? 'SAVING...' : 'SAVE'}
                 </Text>
               </TouchableOpacity>
             </View>
-          </ScrollView>
+          </KeyboardAvoidingView>
         </View>
-      </KeyboardAvoidingView>
 
-      {/* Date Picker Modal */}
-      <DatePickerModal
-        visible={isDatePickerOpen}
-        selectedDate={selectedDate}
-        onSelectDate={(newDate) => setSelectedDate(newDate)}
-        onClose={() => setIsDatePickerOpen(false)}
-        accentColor={activeColor}
-      />
+        {/* Date Picker Modal */}
+        <DatePickerModal
+          visible={isDatePickerOpen}
+          selectedDate={selectedDate}
+          onSelectDate={(newDate) => setSelectedDate(newDate)}
+          onClose={() => setIsDatePickerOpen(false)}
+          accentColor={activeColor}
+        />
+      </SafeAreaView>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
+  safeArea: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0,
   },
-  sheetContainer: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
-    maxHeight: '90%',
+  container: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
+  backBtn: {
+    paddingRight: 10,
+  },
+  headerTitleContainer: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
   },
-  headerSubtitle: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
+  headerRightBtn: {
+    padding: 6,
+  },
+  headerRightPlaceholder: {
+    width: 24,
+  },
+  keyboardContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+    gap: 16,
+    paddingBottom: 24,
   },
   typeSelectorRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 16,
   },
   typeBtn: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   typeBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#6B7280',
   },
-  typeBtnTextActive: {
-    color: '#FFFFFF',
+  errorBanner: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
   },
   errorText: {
-    color: '#DC2626',
     fontSize: 13,
-    marginBottom: 10,
     textAlign: 'center',
+    fontWeight: '600',
   },
-  amountContainer: {
+  amountCard: {
+    borderRadius: 14,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  amountCardLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  amountInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    marginBottom: 16,
   },
-  currencyPrefix: {
-    fontSize: 36,
+  currencySymbol: {
+    fontSize: 38,
     fontWeight: '700',
     marginRight: 6,
   },
   amountInput: {
-    fontSize: 40,
+    fontSize: 44,
     fontWeight: '800',
-    minWidth: 120,
+    minWidth: 140,
     textAlign: 'center',
+    paddingVertical: 0,
   },
-  section: {
-    marginBottom: 16,
-  },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4B5563',
-    marginBottom: 8,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  datePillContainer: {
     alignItems: 'center',
   },
-  currentDateBadge: {
+  datePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: 6,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
   },
-  currentDateText: {
+  datePillText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
   },
-  quickDateButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  quickDateBtn: {
-    backgroundColor: '#F9FAFB',
+  noteCard: {
+    borderRadius: 14,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
   },
-  quickDateBtnActive: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#93C5FD',
-  },
-  quickDateText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  quickDateTextActive: {
-    color: '#2563EB',
+  noteLabel: {
+    fontSize: 11,
     fontWeight: '700',
+    letterSpacing: 0.8,
+    marginBottom: 8,
   },
   noteInput: {
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#111827',
-    textAlignVertical: 'top',
-    minHeight: 52,
+    minHeight: 74,
   },
-  actionsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  deleteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FEE2E2',
-    paddingVertical: 14,
+  bottomBar: {
     paddingHorizontal: 16,
-    borderRadius: 10,
-    gap: 6,
-  },
-  deleteBtnText: {
-    color: '#DC2626',
-    fontWeight: '700',
-    fontSize: 14,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    elevation: 8,
   },
   saveBtn: {
-    flex: 1,
-    paddingVertical: 14,
+    height: 52,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   saveBtnText: {
     color: '#FFFFFF',
-    fontWeight: '700',
     fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
-  btnDisabled: {
+  saveBtnDisabled: {
     opacity: 0.6,
   },
 });

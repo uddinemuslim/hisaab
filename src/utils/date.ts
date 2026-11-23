@@ -33,6 +33,19 @@ export function formatDate(timestamp: number): string {
   return `${day} ${month} ${year}`;
 }
 
+/**
+ * Formats a timestamp into a short pill format: e.g. "23 Nov 26"
+ */
+export function formatDatePill(timestamp: number): string {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  const day = date.getDate().toString().padStart(2, '0');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[date.getMonth()];
+  const yy = date.getFullYear().toString().slice(-2);
+  return `${day} ${month} ${yy}`;
+}
+
 export function formatDateTime(timestamp: number): string {
   if (!timestamp) return '';
   const date = new Date(timestamp);

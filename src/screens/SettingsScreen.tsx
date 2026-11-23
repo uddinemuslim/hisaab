@@ -10,6 +10,8 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Image,
+  Linking,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthState } from '../types';
@@ -22,6 +24,7 @@ import {
   SyncStatus,
 } from '../services';
 import { formatRelativeSyncTime } from '../utils';
+import { useTheme } from '../theme';
 
 interface SettingsScreenProps {
   authState: AuthState;
@@ -36,6 +39,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onAuthStateChange,
   onDataRestored,
 }) => {
+  const { mode, setMode, colors, isDark } = useTheme();
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
     isSyncing: false,
     lastSyncedAt: authState.lastSyncedAt,
@@ -136,56 +140,70 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     );
   };
 
+  const handleOpenGitHub = () => {
+    Linking.openURL('https://github.com/uddinemuslim').catch((err) =>
+      console.warn('Could not open GitHub link:', err)
+    );
+  };
+
   const isGoogle = authState.mode === 'google';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.container}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.surface }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <TouchableOpacity
             style={styles.backBtn}
             onPress={onBack}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <MaterialCommunityIcons name="arrow-left" size={24} color="#111827" />
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Settings & Backup</Text>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Settings</Text>
           <View style={{ width: 24 }} />
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
           {/* Account Profile Card */}
-          <View style={styles.card}>
-            <Text style={styles.sectionHeader}>ACCOUNT</Text>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>ACCOUNT</Text>
             {isGoogle ? (
               <View style={styles.profileRow}>
-                <View style={styles.avatarCircle}>
+                <View style={[styles.avatarCircle, { backgroundColor: isDark ? '#374151' : '#FEE2E2' }]}>
                   <MaterialCommunityIcons name="google" size={24} color="#EA4335" />
                 </View>
                 <View style={styles.profileInfo}>
-                  <Text style={styles.profileName}>{authState.user?.name || 'Google User'}</Text>
-                  <Text style={styles.profileEmail}>{authState.user?.email}</Text>
-                  <View style={styles.activeBadge}>
-                    <Text style={styles.activeBadgeText}>Google Drive Sync Active</Text>
+                  <Text style={[styles.profileName, { color: colors.textPrimary }]}>
+                    {authState.user?.name || 'Google User'}
+                  </Text>
+                  <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>
+                    {authState.user?.email}
+                  </Text>
+                  <View style={[styles.activeBadge, { backgroundColor: colors.gotBg }]}>
+                    <Text style={[styles.activeBadgeText, { color: colors.gotText }]}>
+                      Google Drive Sync Active
+                    </Text>
                   </View>
                 </View>
               </View>
             ) : (
               <View style={styles.guestBox}>
                 <View style={styles.guestRow}>
-                  <MaterialCommunityIcons name="account-outline" size={28} color="#6B7280" />
+                  <MaterialCommunityIcons name="account-outline" size={28} color={colors.textSecondary} />
                   <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={styles.profileName}>Guest Mode (Offline)</Text>
-                    <Text style={styles.guestNote}>
+                    <Text style={[styles.profileName, { color: colors.textPrimary }]}>
+                      Guest Mode (Offline)
+                    </Text>
+                    <Text style={[styles.guestNote, { color: colors.textSecondary }]}>
                       Data stored locally on this phone. Link Google to enable auto-backup.
                     </Text>
                   </View>
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.btn, styles.linkGoogleBtn]}
+                  style={[styles.btn, styles.linkGoogleBtn, { backgroundColor: colors.primary }]}
                   onPress={handleLinkGoogle}
                   disabled={actionInProgress === 'link'}
                 >
@@ -202,17 +220,77 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             )}
           </View>
 
+          {/* Theme / Appearance Selector */}
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>APPEARANCE</Text>
+            <View style={styles.themeSelectorRow}>
+              <TouchableOpacity
+                style={[
+                  styles.themeOptionBtn,
+                  { borderColor: colors.border, backgroundColor: !isDark ? colors.primaryLight : colors.inputBg },
+                  !isDark && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => setMode('light')}
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons
+                  name="weather-sunny"
+                  size={22}
+                  color={!isDark ? colors.primary : colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.themeOptionText,
+                    { color: !isDark ? colors.primary : colors.textSecondary, fontWeight: !isDark ? '700' : '500' },
+                  ]}
+                >
+                  Light Mode
+                </Text>
+                {!isDark && (
+                  <MaterialCommunityIcons name="check-circle" size={16} color={colors.primary} style={styles.checkIcon} />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.themeOptionBtn,
+                  { borderColor: colors.border, backgroundColor: isDark ? colors.primaryLight : colors.inputBg },
+                  isDark && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => setMode('dark')}
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons
+                  name="weather-night"
+                  size={22}
+                  color={isDark ? colors.primary : colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.themeOptionText,
+                    { color: isDark ? colors.primary : colors.textSecondary, fontWeight: isDark ? '700' : '500' },
+                  ]}
+                >
+                  Dark Mode
+                </Text>
+                {isDark && (
+                  <MaterialCommunityIcons name="check-circle" size={16} color={colors.primary} style={styles.checkIcon} />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* Cloud Backup & Sync Section (for Google users) */}
           {isGoogle && (
-            <View style={styles.card}>
-              <Text style={styles.sectionHeader}>GOOGLE DRIVE BACKUP</Text>
-              <Text style={styles.backupDescription}>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>GOOGLE DRIVE BACKUP</Text>
+              <Text style={[styles.backupDescription, { color: colors.textSecondary }]}>
                 Backups are automatically saved to your private Google Drive appDataFolder with 3-second debouncing on every entry.
               </Text>
 
-              <View style={styles.syncStatusRow}>
-                <Text style={styles.syncLabel}>Last Synced:</Text>
-                <Text style={styles.syncValue}>
+              <View style={[styles.syncStatusRow, { borderColor: colors.borderLight }]}>
+                <Text style={[styles.syncLabel, { color: colors.textSecondary }]}>Last Synced:</Text>
+                <Text style={[styles.syncValue, { color: colors.textPrimary }]}>
                   {syncStatus.isSyncing
                     ? 'Syncing now...'
                     : formatRelativeSyncTime(syncStatus.lastSyncedAt)}
@@ -220,36 +298,44 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </View>
 
               {syncStatus.error ? (
-                <Text style={styles.errorText}>Error: {syncStatus.error}</Text>
+                <Text style={[styles.errorText, { color: colors.gave }]}>Error: {syncStatus.error}</Text>
               ) : null}
 
               <View style={styles.syncBtnRow}>
                 <TouchableOpacity
-                  style={[styles.btn, styles.backupBtn]}
+                  style={[
+                    styles.btn,
+                    styles.backupBtn,
+                    { backgroundColor: colors.primaryLight, borderColor: colors.primaryBorder },
+                  ]}
                   onPress={handleBackupNow}
                   disabled={!!actionInProgress || syncStatus.isSyncing}
                 >
                   {actionInProgress === 'backup' ? (
-                    <ActivityIndicator size="small" color="#2563EB" />
+                    <ActivityIndicator size="small" color={colors.primary} />
                   ) : (
                     <>
-                      <MaterialCommunityIcons name="cloud-upload-outline" size={18} color="#2563EB" style={{ marginRight: 6 }} />
-                      <Text style={styles.backupBtnText}>Backup Now</Text>
+                      <MaterialCommunityIcons name="cloud-upload-outline" size={18} color={colors.primary} style={{ marginRight: 6 }} />
+                      <Text style={[styles.backupBtnText, { color: colors.primary }]}>Backup Now</Text>
                     </>
                   )}
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.btn, styles.restoreBtn]}
+                  style={[
+                    styles.btn,
+                    styles.restoreBtn,
+                    { backgroundColor: isDark ? colors.background : '#F3F4F6', borderColor: colors.border },
+                  ]}
                   onPress={handleRestoreNow}
                   disabled={!!actionInProgress || syncStatus.isSyncing}
                 >
                   {actionInProgress === 'restore' ? (
-                    <ActivityIndicator size="small" color="#374151" />
+                    <ActivityIndicator size="small" color={colors.textPrimary} />
                   ) : (
                     <>
-                      <MaterialCommunityIcons name="cloud-download-outline" size={18} color="#374151" style={{ marginRight: 6 }} />
-                      <Text style={styles.restoreBtnText}>Restore Now</Text>
+                      <MaterialCommunityIcons name="cloud-download-outline" size={18} color={colors.textPrimary} style={{ marginRight: 6 }} />
+                      <Text style={[styles.restoreBtnText, { color: colors.textPrimary }]}>Restore Now</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -257,35 +343,61 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </View>
           )}
 
-          {/* Privacy & App Info Card */}
-          <View style={styles.card}>
-            <Text style={styles.sectionHeader}>ABOUT HISAAB</Text>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Architecture</Text>
-              <Text style={styles.infoValue}>Zero Backend (100% Client-Side)</Text>
+          {/* About Hisaab Card */}
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>ABOUT HISAAB</Text>
+
+            <View style={styles.aboutHeader}>
+              <Image
+                source={require('../../assets/icon.png')}
+                style={styles.aboutLogo}
+                resizeMode="contain"
+              />
+              <Text style={[styles.aboutAppName, { color: colors.textPrimary }]}>HISAAB</Text>
+              <Text style={[styles.aboutAppTagline, { color: colors.textSecondary }]}>
+                Simple, Private Personal Ledger
+              </Text>
             </View>
+
+            <View style={[styles.dividerLine, { backgroundColor: colors.borderLight }]} />
+
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Local Database</Text>
-              <Text style={styles.infoValue}>SQLite (WAL mode)</Text>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>App Version</Text>
+              <Text style={[styles.infoValue, { color: colors.textPrimary }]}>1.0.0</Text>
             </View>
+
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Cloud Storage</Text>
-              <Text style={styles.infoValue}>Hidden Google Drive appData</Text>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Developer</Text>
+              <Text style={[styles.infoValue, { color: colors.textPrimary }]}>moslem</Text>
             </View>
+
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Version</Text>
-              <Text style={styles.infoValue}>1.0.0</Text>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>GitHub Profile</Text>
+              <TouchableOpacity
+                style={styles.githubLink}
+                onPress={handleOpenGitHub}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="github" size={18} color={colors.primary} style={{ marginRight: 5 }} />
+                <Text style={[styles.githubLinkText, { color: colors.primary }]}>
+                  uddinemuslim
+                </Text>
+                <MaterialCommunityIcons name="open-in-new" size={14} color={colors.primary} style={{ marginLeft: 3 }} />
+              </TouchableOpacity>
             </View>
           </View>
 
           {/* Sign Out Button */}
           <TouchableOpacity
-            style={styles.signOutBtn}
+            style={[
+              styles.signOutBtn,
+              { backgroundColor: colors.gaveBg },
+            ]}
             onPress={handleSignOut}
             activeOpacity={0.8}
           >
-            <MaterialCommunityIcons name="logout" size={20} color="#DC2626" style={{ marginRight: 8 }} />
-            <Text style={styles.signOutBtnText}>
+            <MaterialCommunityIcons name="logout" size={20} color={colors.gaveText} style={{ marginRight: 8 }} />
+            <Text style={[styles.signOutBtnText, { color: colors.gaveText }]}>
               {isGoogle ? 'Sign Out of Google' : 'Exit Guest Mode'}
             </Text>
           </TouchableOpacity>
@@ -298,12 +410,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0,
   },
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   header: {
     flexDirection: 'row',
@@ -311,9 +421,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   backBtn: {
     padding: 2,
@@ -321,23 +429,19 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
   },
   content: {
     padding: 16,
     gap: 16,
   },
   card: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   sectionHeader: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#6B7280',
     letterSpacing: 0.8,
     marginBottom: 12,
   },
@@ -349,7 +453,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -360,15 +463,12 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
   },
   profileEmail: {
     fontSize: 13,
-    color: '#6B7280',
     marginTop: 2,
   },
   activeBadge: {
-    backgroundColor: '#DCFCE7',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -378,7 +478,6 @@ const styles = StyleSheet.create({
   activeBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#16A34A',
   },
   guestBox: {},
   guestRow: {
@@ -388,12 +487,10 @@ const styles = StyleSheet.create({
   },
   guestNote: {
     fontSize: 12,
-    color: '#6B7280',
     marginTop: 2,
     lineHeight: 16,
   },
   linkGoogleBtn: {
-    backgroundColor: '#2563EB',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -404,9 +501,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  themeSelectorRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  themeOptionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 6,
+  },
+  themeOptionText: {
+    fontSize: 14,
+  },
+  checkIcon: {
+    marginLeft: 2,
+  },
   backupDescription: {
     fontSize: 13,
-    color: '#6B7280',
     lineHeight: 18,
     marginBottom: 12,
   },
@@ -416,22 +533,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#F3F4F6',
     marginBottom: 14,
   },
   syncLabel: {
     fontSize: 13,
-    color: '#4B5563',
     fontWeight: '500',
   },
   syncValue: {
     fontSize: 13,
-    color: '#111827',
     fontWeight: '600',
   },
   errorText: {
     fontSize: 12,
-    color: '#DC2626',
     marginBottom: 10,
   },
   syncBtnRow: {
@@ -446,52 +559,75 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backupBtn: {
-    backgroundColor: '#EFF6FF',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
     flexDirection: 'row',
   },
   backupBtnText: {
-    color: '#2563EB',
     fontWeight: '600',
     fontSize: 13,
   },
   restoreBtn: {
-    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     flexDirection: 'row',
   },
   restoreBtnText: {
-    color: '#374151',
     fontWeight: '600',
     fontSize: 13,
+  },
+  aboutHeader: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  aboutLogo: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    marginBottom: 10,
+  },
+  aboutAppName: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+  },
+  aboutAppTagline: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  dividerLine: {
+    height: 1,
+    marginVertical: 10,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    alignItems: 'center',
+    paddingVertical: 8,
   },
   infoLabel: {
     fontSize: 13,
-    color: '#6B7280',
   },
   infoValue: {
     fontSize: 13,
-    color: '#111827',
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  githubLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  githubLinkText: {
+    fontSize: 13,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
   signOutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEE2E2',
     height: 48,
     borderRadius: 10,
     marginTop: 8,
   },
   signOutBtnText: {
-    color: '#DC2626',
     fontWeight: '700',
     fontSize: 14,
   },

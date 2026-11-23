@@ -20,6 +20,7 @@ import {
 } from '../db';
 import { triggerDebouncedAutoBackup, subscribeSyncStatus, SyncStatus } from '../services';
 import { SummaryCard, PartyRow, AddPartyModal } from '../components';
+import { useTheme } from '../theme';
 
 interface HomeScreenProps {
   authState: AuthState;
@@ -32,6 +33,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onSelectParty,
   onOpenSettings,
 }) => {
+  const { colors, isDark } = useTheme();
   const [parties, setParties] = useState<Party[]>([]);
   const [summary, setSummary] = useState<DashboardSummary>({
     totalWillGetPaise: 0,
@@ -84,14 +86,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.container}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.surface }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Top Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <View>
-            <Text style={styles.headerTitle}>HISAAB</Text>
-            <Text style={styles.headerSubtitle}>
+            <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>HISAAB</Text>
+            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
               {authState.mode === 'google'
                 ? `Signed in as ${authState.user?.name || 'Google'}`
                 : 'Guest Mode (Offline)'}
@@ -100,8 +102,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
           <View style={styles.headerActions}>
             {syncStatus.isSyncing && (
-              <View style={styles.syncingPill}>
-                <Text style={styles.syncingText}>Syncing...</Text>
+              <View style={[styles.syncingPill, { backgroundColor: colors.primaryLight }]}>
+                <Text style={[styles.syncingText, { color: colors.primary }]}>Syncing...</Text>
               </View>
             )}
 
@@ -110,7 +112,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               onPress={onOpenSettings}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <MaterialCommunityIcons name="cog-outline" size={24} color="#374151" />
+              <MaterialCommunityIcons name="cog-outline" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -119,26 +121,34 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <SummaryCard summary={summary} />
 
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <MaterialCommunityIcons name="magnify" size={20} color="#9CA3AF" style={styles.searchIcon} />
+        <View
+          style={[
+            styles.searchContainer,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <MaterialCommunityIcons name="magnify" size={20} color={colors.textSecondary} style={styles.searchIcon} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.textPrimary }]}
             placeholder="Search party by name or phone..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
             clearButtonMode="while-editing"
           />
           {searchQuery ? (
             <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <MaterialCommunityIcons name="close-circle" size={18} color="#9CA3AF" />
+              <MaterialCommunityIcons name="close-circle" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           ) : null}
         </View>
 
         {/* Party Count Bar */}
-        <View style={styles.partyBar}>
-          <Text style={styles.partyBarTitle}>PARTIES ({parties.length})</Text>
+        <View style={[styles.partyBar, { backgroundColor: isDark ? colors.background : '#F3F4F6' }]}>
+          <Text style={[styles.partyBarTitle, { color: colors.textSecondary }]}>PARTIES ({parties.length})</Text>
         </View>
 
         {/* Parties List */}
@@ -152,16 +162,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             />
           )}
           refreshControl={
-            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={['#2563EB']} />
+            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[colors.primary]} />
           }
           contentContainerStyle={parties.length === 0 ? styles.emptyContainer : styles.listContent}
           ListEmptyComponent={
             <View style={styles.emptyView}>
-              <MaterialCommunityIcons name="account-group-outline" size={54} color="#D1D5DB" />
-              <Text style={styles.emptyTitle}>
+              <MaterialCommunityIcons name="account-group-outline" size={54} color={colors.border} />
+              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
                 {searchQuery ? 'No matching parties found' : 'No parties yet'}
               </Text>
-              <Text style={styles.emptySubtitle}>
+              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
                 {searchQuery
                   ? 'Try searching with a different name or phone number'
                   : 'Tap "+ Add Party" below to record your first credit or debit.'}
@@ -172,7 +182,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
         {/* Floating Add Party FAB */}
         <TouchableOpacity
-          style={styles.fab}
+          style={[styles.fab, { backgroundColor: colors.primary }]}
           onPress={() => setIsAddModalOpen(true)}
           activeOpacity={0.85}
         >
@@ -194,12 +204,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0,
   },
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   header: {
     flexDirection: 'row',
@@ -207,19 +215,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#111827',
     letterSpacing: 1.2,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#6B7280',
     marginTop: 1,
   },
   headerActions: {
@@ -228,7 +232,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   syncingPill: {
-    backgroundColor: '#EFF6FF',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 12,
@@ -236,7 +239,6 @@ const styles = StyleSheet.create({
   syncingText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#2563EB',
   },
   settingsBtn: {
     padding: 4,
@@ -244,14 +246,12 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
     marginBottom: 8,
     paddingHorizontal: 12,
     height: 44,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   searchIcon: {
     marginRight: 8,
@@ -259,17 +259,14 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#111827',
   },
   partyBar: {
     paddingHorizontal: 16,
     paddingVertical: 6,
-    backgroundColor: '#F3F4F6',
   },
   partyBarTitle: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#6B7280',
     letterSpacing: 0.8,
   },
   listContent: {
@@ -289,13 +286,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
     marginTop: 12,
     marginBottom: 4,
   },
   emptySubtitle: {
     fontSize: 13,
-    color: '#9CA3AF',
     textAlign: 'center',
     lineHeight: 18,
   },
@@ -305,7 +300,6 @@ const styles = StyleSheet.create({
     right: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2563EB',
     paddingVertical: 12,
     paddingHorizontal: 18,
     borderRadius: 28,

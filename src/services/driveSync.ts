@@ -1,7 +1,10 @@
 import { getNativeGoogleSignin } from './googleAuthNative';
 import { exportAllData, restoreAllData } from '../db';
-import { BackupPayload, AuthMode } from '../types';
+import { BackupPayload } from '../types';
 import { getStoredAuthState, updateLastSyncedTimestamp } from './auth';
+import { parseDriveError } from './driveDiagnostics';
+
+export * from './driveDiagnostics';
 
 const BACKUP_FILENAME = 'hisaab_backup.json';
 const DRIVE_FILES_URL = 'https://www.googleapis.com/drive/v3/files';
@@ -35,13 +38,35 @@ function updateStatus(updates: Partial<SyncStatus>) {
   syncStatusListeners.forEach((l) => l(currentSyncStatus));
 }
 
+
+
 /**
- * Retrieves valid Google OAuth access token.
+ * Retrieves valid Google OAuth access token with support for force-refresh.
  */
-async function getAccessToken(): Promise<string | null> {
+export async function getAccessToken(forceRefresh = false): Promise<string | null> {
   try {
     const { isAvailable, GoogleSignin } = getNativeGoogleSignin();
     if (!isAvailable || !GoogleSignin) return null;
+
+    if (forceRefresh) {
+      try {
+        const tokens = await GoogleSignin.getTokens();
+        if (tokens?.accessToken && typeof GoogleSignin.clearCachedAccessToken === 'function') {
+          await GoogleSignin.clearCachedAccessToken(tokens.accessToken);
+        }
+      } catch (err) {
+        console.warn('Could not clear cached access token:', err);
+      }
+
+      try {
+        if (typeof GoogleSignin.signInSilently === 'function') {
+          await GoogleSignin.signInSilently();
+        }
+      } catch (err) {
+        console.warn('Silent sign-in failed during token refresh:', err);
+      }
+    }
+
     const tokens = await GoogleSignin.getTokens();
     return tokens.accessToken || null;
   } catch (error) {
@@ -51,9 +76,36 @@ async function getAccessToken(): Promise<string | null> {
 }
 
 /**
+ * Handles requesting missing drive.appdata scope or re-authenticating if required.
+ */
+export async function requestDriveScopeOrReauth(): Promise<string | null> {
+  try {
+    const { isAvailable, GoogleSignin } = getNativeGoogleSignin();
+    if (!isAvailable || !GoogleSignin) return null;
+
+    if (typeof GoogleSignin.addScopes === 'function') {
+      try {
+        await GoogleSignin.addScopes({
+          scopes: ['https://www.googleapis.com/auth/drive.appdata'],
+        });
+      } catch (e) {
+        console.warn('addScopes failed:', e);
+      }
+    }
+
+    return await getAccessToken(true);
+  } catch (error) {
+    console.warn('Re-auth / scope request failed:', error);
+    return null;
+  }
+}
+
+/**
  * Searches for hisaab_backup.json in Google Drive appDataFolder.
  */
-async function findBackupFileId(accessToken: string): Promise<string | null> {
+async function findBackupFileId(
+  accessToken: string
+): Promise<{ fileId: string | null; error?: string; status: number }> {
   const query = encodeURIComponent(`name = '${BACKUP_FILENAME}' and trashed = false`);
   const url = `${DRIVE_FILES_URL}?spaces=appDataFolder&q=${query}&fields=files(id,name,modifiedTime)`;
 
@@ -65,14 +117,13 @@ async function findBackupFileId(accessToken: string): Promise<string | null> {
   });
 
   if (!response.ok) {
-    throw new Error(`Drive search failed: ${response.status} ${response.statusText}`);
+    const errMsg = await parseDriveError(response, 'Drive search');
+    return { fileId: null, error: errMsg, status: response.status };
   }
 
   const data = await response.json();
-  if (data.files && data.files.length > 0) {
-    return data.files[0].id;
-  }
-  return null;
+  const fileId = data.files && data.files.length > 0 ? data.files[0].id : null;
+  return { fileId, status: response.status };
 }
 
 /**
@@ -87,7 +138,7 @@ export async function performBackup(): Promise<{ success: boolean; error?: strin
 
     updateStatus({ isSyncing: true, error: null });
 
-    const accessToken = await getAccessToken();
+    let accessToken = await getAccessToken();
     if (!accessToken) {
       throw new Error('Google authentication session expired. Please sign in again.');
     }
@@ -97,7 +148,30 @@ export async function performBackup(): Promise<{ success: boolean; error?: strin
     const jsonContent = JSON.stringify(payload);
 
     // 2. Check if backup file already exists in appDataFolder
-    const existingFileId = await findBackupFileId(accessToken);
+    let searchResult = await findBackupFileId(accessToken);
+
+    // If token expired (401) or scope missing (403), attempt token refresh / reauth once
+    if (searchResult.error && (searchResult.status === 401 || searchResult.status === 403)) {
+      if (searchResult.error.includes('Missing Google Drive AppData permissions')) {
+        const reauthedToken = await requestDriveScopeOrReauth();
+        if (reauthedToken) {
+          accessToken = reauthedToken;
+          searchResult = await findBackupFileId(accessToken);
+        }
+      } else if (searchResult.status === 401) {
+        const refreshedToken = await getAccessToken(true);
+        if (refreshedToken) {
+          accessToken = refreshedToken;
+          searchResult = await findBackupFileId(accessToken);
+        }
+      }
+    }
+
+    if (searchResult.error) {
+      throw new Error(searchResult.error);
+    }
+
+    const existingFileId = searchResult.fileId;
 
     if (existingFileId) {
       // Overwrite existing file via PATCH media
@@ -112,7 +186,8 @@ export async function performBackup(): Promise<{ success: boolean; error?: strin
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to update backup file: ${response.status}`);
+        const errMsg = await parseDriveError(response, 'Updating backup file');
+        throw new Error(errMsg);
       }
     } else {
       // Create new file via multipart upload in appDataFolder
@@ -142,7 +217,8 @@ export async function performBackup(): Promise<{ success: boolean; error?: strin
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to create backup file: ${response.status}`);
+        const errMsg = await parseDriveError(response, 'Creating backup file');
+        throw new Error(errMsg);
       }
     }
 
@@ -198,12 +274,35 @@ export async function restoreFromDrive(): Promise<{
 
     updateStatus({ isSyncing: true, error: null });
 
-    const accessToken = await getAccessToken();
+    let accessToken = await getAccessToken();
     if (!accessToken) {
       throw new Error('Google authentication session expired.');
     }
 
-    const fileId = await findBackupFileId(accessToken);
+    let searchResult = await findBackupFileId(accessToken);
+
+    // If token expired (401) or scope missing (403), attempt token refresh / reauth once
+    if (searchResult.error && (searchResult.status === 401 || searchResult.status === 403)) {
+      if (searchResult.error.includes('Missing Google Drive AppData permissions')) {
+        const reauthedToken = await requestDriveScopeOrReauth();
+        if (reauthedToken) {
+          accessToken = reauthedToken;
+          searchResult = await findBackupFileId(accessToken);
+        }
+      } else if (searchResult.status === 401) {
+        const refreshedToken = await getAccessToken(true);
+        if (refreshedToken) {
+          accessToken = refreshedToken;
+          searchResult = await findBackupFileId(accessToken);
+        }
+      }
+    }
+
+    if (searchResult.error) {
+      throw new Error(searchResult.error);
+    }
+
+    const fileId = searchResult.fileId;
     if (!fileId) {
       updateStatus({ isSyncing: false, error: null });
       return { success: true, restored: false }; // No remote backup yet
@@ -219,7 +318,8 @@ export async function restoreFromDrive(): Promise<{
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to download backup file: ${response.status}`);
+      const errMsg = await parseDriveError(response, 'Downloading backup file');
+      throw new Error(errMsg);
     }
 
     const payload: BackupPayload = await response.json();

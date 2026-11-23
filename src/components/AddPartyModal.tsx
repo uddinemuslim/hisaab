@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useTheme } from '../theme';
 
 interface AddPartyModalProps {
   visible: boolean;
@@ -21,6 +22,7 @@ export const AddPartyModal: React.FC<AddPartyModalProps> = ({
   onClose,
   onSubmit,
 }) => {
+  const { colors, isDark } = useTheme();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,20 +67,29 @@ export const AddPartyModal: React.FC<AddPartyModalProps> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.overlay}
       >
-        <View style={styles.dialog}>
-          <Text style={styles.title}>Add New Party</Text>
-          <Text style={styles.subtitle}>Create a customer or vendor ledger</Text>
+        <View style={[styles.dialog, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Add New Party</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            Create a customer or vendor ledger
+          </Text>
 
           {errorMessage ? (
-            <Text style={styles.errorText}>{errorMessage}</Text>
+            <Text style={[styles.errorText, { color: colors.gave }]}>{errorMessage}</Text>
           ) : null}
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Party Name *</Text>
+            <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Party Name *</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBg,
+                  borderColor: colors.inputBorder,
+                  color: colors.textPrimary,
+                },
+              ]}
               placeholder="e.g. Ramesh Kumar, Store, etc."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.textMuted}
               value={name}
               onChangeText={(text) => {
                 setName(text);
@@ -90,11 +101,18 @@ export const AddPartyModal: React.FC<AddPartyModalProps> = ({
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Phone Number (Optional)</Text>
+            <Text style={[styles.inputLabel, { color: colors.textPrimary }]}>Phone Number (Optional)</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBg,
+                  borderColor: colors.inputBorder,
+                  color: colors.textPrimary,
+                },
+              ]}
               placeholder="e.g. 9876543210"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.textMuted}
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
@@ -104,15 +122,24 @@ export const AddPartyModal: React.FC<AddPartyModalProps> = ({
 
           <View style={styles.buttonRow}>
             <TouchableOpacity
-              style={[styles.btn, styles.cancelBtn]}
+              style={[
+                styles.btn,
+                styles.cancelBtn,
+                { backgroundColor: isDark ? colors.background : '#F3F4F6' },
+              ]}
               onPress={handleCancel}
               disabled={isSubmitting}
             >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+              <Text style={[styles.cancelBtnText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.btn, styles.saveBtn, isSubmitting && styles.btnDisabled]}
+              style={[
+                styles.btn,
+                styles.saveBtn,
+                { backgroundColor: colors.primary },
+                isSubmitting && styles.btnDisabled,
+              ]}
               onPress={handleSave}
               disabled={isSubmitting}
             >
@@ -130,7 +157,7 @@ export const AddPartyModal: React.FC<AddPartyModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -138,25 +165,22 @@ const styles = StyleSheet.create({
   dialog: {
     width: '100%',
     maxWidth: 380,
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
-    elevation: 5,
+    elevation: 8,
+    borderWidth: 1,
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 13,
-    color: '#6B7280',
     marginBottom: 16,
   },
   errorText: {
     fontSize: 13,
-    color: '#DC2626',
     marginBottom: 10,
   },
   inputGroup: {
@@ -165,18 +189,14 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 6,
   },
   input: {
     height: 46,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 15,
-    color: '#111827',
-    backgroundColor: '#F9FAFB',
   },
   buttonRow: {
     flexDirection: 'row',
@@ -191,17 +211,12 @@ const styles = StyleSheet.create({
     minWidth: 90,
     alignItems: 'center',
   },
-  cancelBtn: {
-    backgroundColor: '#F3F4F6',
-  },
+  cancelBtn: {},
   cancelBtnText: {
-    color: '#4B5563',
     fontWeight: '600',
     fontSize: 14,
   },
-  saveBtn: {
-    backgroundColor: '#2563EB',
-  },
+  saveBtn: {},
   saveBtnText: {
     color: '#FFFFFF',
     fontWeight: '600',

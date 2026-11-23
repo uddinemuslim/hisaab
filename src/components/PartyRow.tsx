@@ -3,10 +3,10 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Party } from '../types';
 import {
   formatPaiseToRupees,
-  getBalanceColor,
   getBalanceLabel,
   formatDate,
 } from '../utils';
+import { useTheme } from '../theme';
 
 interface PartyRowProps {
   party: Party;
@@ -14,41 +14,48 @@ interface PartyRowProps {
 }
 
 export const PartyRow: React.FC<PartyRowProps> = ({ party, onPress }) => {
+  const { colors, isDark } = useTheme();
   const balance = party.net_balance_paise || 0;
-  const balanceColor = getBalanceColor(balance);
+  const balanceColor = balance > 0 ? colors.got : balance < 0 ? colors.gave : colors.settled;
   const balanceLabel = getBalanceLabel(balance);
   const formattedBalance = formatPaiseToRupees(Math.abs(balance));
   const initial = party.name ? party.name.charAt(0).toUpperCase() : '?';
 
   return (
     <TouchableOpacity
-      style={styles.container}
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.surface,
+          borderBottomColor: colors.borderLight,
+        },
+      ]}
       onPress={onPress}
       activeOpacity={0.65}
     >
       {/* Avatar */}
-      <View style={[styles.avatar, { backgroundColor: getAvatarBg(party.name) }]}>
-        <Text style={styles.avatarText}>{initial}</Text>
+      <View style={[styles.avatar, { backgroundColor: getAvatarBg(party.name, isDark) }]}>
+        <Text style={[styles.avatarText, { color: isDark ? '#F1F5F9' : '#1F2937' }]}>{initial}</Text>
       </View>
 
       {/* Info: Name, phone, last transaction */}
       <View style={styles.infoCol}>
-        <Text style={styles.name} numberOfLines={1}>
+        <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
           {party.name}
         </Text>
         <View style={styles.metaRow}>
           {party.phone ? (
-            <Text style={styles.phone} numberOfLines={1}>
+            <Text style={[styles.phone, { color: colors.textSecondary }]} numberOfLines={1}>
               {party.phone}
             </Text>
           ) : null}
           {party.last_transaction_date ? (
-            <Text style={styles.date}>
+            <Text style={[styles.date, { color: colors.textMuted }]}>
               {party.phone ? ' • ' : ''}
               {formatDate(party.last_transaction_date)}
             </Text>
           ) : (
-            <Text style={styles.date}>
+            <Text style={[styles.date, { color: colors.textMuted }]}>
               {party.phone ? ' • ' : ''}No entries yet
             </Text>
           )}
@@ -69,8 +76,8 @@ export const PartyRow: React.FC<PartyRowProps> = ({ party, onPress }) => {
 };
 
 // Generates consistent soft pastel backgrounds for avatars
-function getAvatarBg(name: string): string {
-  const colors = [
+function getAvatarBg(name: string, isDark: boolean): string {
+  const lightColors = [
     '#E0E7FF', // indigo
     '#FCE7F3', // pink
     '#FEF3C7', // amber
@@ -78,22 +85,29 @@ function getAvatarBg(name: string): string {
     '#E0F2FE', // sky
     '#EDE9FE', // violet
   ];
+  const darkColors = [
+    '#312E81', // indigo
+    '#831843', // pink
+    '#78350F', // amber
+    '#064E3B', // emerald
+    '#0C4A6E', // sky
+    '#4C1D95', // violet
+  ];
+  const palette = isDark ? darkColors : lightColors;
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return colors[Math.abs(hash) % colors.length];
+  return palette[Math.abs(hash) % palette.length];
 }
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   avatar: {
     width: 44,
@@ -106,7 +120,6 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1F2937',
   },
   infoCol: {
     flex: 1,
@@ -115,7 +128,6 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 3,
   },
   metaRow: {
@@ -124,11 +136,9 @@ const styles = StyleSheet.create({
   },
   phone: {
     fontSize: 13,
-    color: '#6B7280',
   },
   date: {
     fontSize: 12,
-    color: '#9CA3AF',
   },
   balanceCol: {
     alignItems: 'flex-end',
